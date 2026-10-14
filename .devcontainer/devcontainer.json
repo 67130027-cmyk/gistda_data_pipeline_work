@@ -1,0 +1,5 @@
+{
+  "name": "test-data-pipelines-work",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "postStartCommand": "sudo iptables-legacy -P FORWARD ACCEPT || true"
+}

@@ -1,0 +1,9 @@
+# ไฟล์ความลับ
+.env
+
+# log ของ Airflow
+logs/
+
+# Python cache
+__pycache__/
+*.pyc
