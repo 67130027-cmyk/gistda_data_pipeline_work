@@ -1,9 +1,5 @@
 {
   "name": "gistda_data_pipeline_work",
   "image": "mcr.microsoft.com/devcontainers/universal:2",
-  "postStartCommand": [
-    "bash",
-    "-c",
-    "for i in $(seq 30); do docker info >/dev/null 2>&1 && break; sleep 2; done; sudo iptables -P FORWARD ACCEPT; sudo iptables-legacy -P FORWARD ACCEPT; sudo iptables-nft -P FORWARD ACCEPT; docker compose up -d; true"
-  ]
+  "postStartCommand": "sudo iptables-legacy -P FORWARD ACCEPT || true"
 }
