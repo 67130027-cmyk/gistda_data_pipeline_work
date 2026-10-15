@@ -1,5 +1,4 @@
 {
-  "name": "gistda_data_pipeline_work",
   "image": "mcr.microsoft.com/devcontainers/universal:2",
-  "postStartCommand": "sudo iptables-legacy -P FORWARD ACCEPT || true"
+  "postStartCommand": "bash .devcontainer/start-airflow.sh"
 }
