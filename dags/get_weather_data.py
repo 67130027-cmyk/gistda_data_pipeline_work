@@ -13,3 +13,6 @@ print(response.url)
 
 data = response.json()
 print(data)
+
+with open("data.json")
+print(data)

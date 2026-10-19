@@ -1,10 +1,10 @@
+import json
+import requests
 from airflow import DAG
 from airflow.models import Variable
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
 from airflow.utils import timezone
-
-import requests
 
 
 def _get_weather_data():
@@ -13,7 +13,7 @@ def _get_weather_data():
     payload = {
         "q": "bangkok",
         "appid": API_KEY,
-        "units": "metric"
+        "units": "metric",
     }
     url = "https://api.openweathermap.org/data/2.5/weather"
     response = requests.get(url, params=payload)
@@ -22,6 +22,26 @@ def _get_weather_data():
 
     data = response.json()
     print(data)
+
+    with open("/opt/airflow/dags/data.json", "w") as f:
+        json.dump(data, f)
+
+
+def _create_weather_table():
+    pg_hook = PostgresHook(
+        postgres_conn_id="weather_postgres_conn",
+        schema=connection.cursor(),
+    )
+    sql = """
+        CREATE TABLE IF NOT EXTSTS weathers (
+            dt BIGINT NOT NULL,
+            temp FLOAT NOT NULL
+        )
+    """
+    connection = pg_hook.get_conn()
+    cursor = connection.cursor()
+
+    pg_hook.run(sql)
 
 
 with DAG(
@@ -38,8 +58,11 @@ with DAG(
         python_callable=_get_weather_data,
     )
 
+    create_weather_table = PythonOperator(
+        task_id="create_weather_table",
+        python_callable=_create_weather_table,
+    )
+
     end = EmptyOperator(task_id="end")
 
-    start >> get_weather_data >> end
-   
-
+    start >> get_weather_data >> create_weather_table >> end
