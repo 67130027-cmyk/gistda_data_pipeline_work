@@ -4,6 +4,7 @@ from airflow import DAG
 from airflow.models import Variable
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import PythonOperator
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.utils import timezone
 
 
@@ -28,20 +29,33 @@ def _get_weather_data():
 
 
 def _create_weather_table():
-    pg_hook = PostgresHook(
-        postgres_conn_id="weather_postgres_conn",
-        schema=connection.cursor(),
-    )
+    pg_hook = PostgresHook(postgres_conn_id="weather_postgres_conn")
     sql = """
-        CREATE TABLE IF NOT EXTSTS weathers (
+        CREATE TABLE IF NOT EXISTS weathers (
             dt BIGINT NOT NULL,
             temp FLOAT NOT NULL
         )
     """
+    pg_hook.run(sql)
+
+def _load_data_to_postgres():
+    pg_hook = PostgresHook(
+        postgres_conn_id="weather_postgres_conn",
+        schema="postgres"
+    )
     connection = pg_hook.get_conn()
     cursor = connection.cursor()
 
-    pg_hook.run(sql)
+    with open(f"/opt/airflow/dags/data.json", "r") as f:
+        data = json.load(f)
+
+    temp = data["main"]["temp"]
+    dt = data["dt"]
+    sql = f"""
+        INSERT INTO weathers (dt, temp) VALUES ({dt}, {temp})
+    """
+    cursor.execute(sql)
+    connection.commit()
 
 
 with DAG(
@@ -57,12 +71,15 @@ with DAG(
         task_id="get_weather_data",
         python_callable=_get_weather_data,
     )
-
     create_weather_table = PythonOperator(
         task_id="create_weather_table",
         python_callable=_create_weather_table,
     )
 
+    load_data_to_postgres = PythonOperator(
+        task_id="load_data_to_postgres",
+        python_callable=_load_data_to_postgres,
+    )
     end = EmptyOperator(task_id="end")
 
-    start >> get_weather_data >> create_weather_table >> end
+    start >> get_weather_data >> create_weather_table >> load_data_to_postgres >> end
